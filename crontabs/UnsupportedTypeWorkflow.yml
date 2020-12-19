@@ -1,0 +1,6 @@
+- type: FTP
+  method: GET
+  url: ftp://acme.com/
+  schedule: 0 0 12 1/5 * ?
+  failureURL: https://acme.com/alert-signal
+  enabled: true

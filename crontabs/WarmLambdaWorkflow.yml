@@ -1,0 +1,5 @@
+- type: HTTP
+  method: GET
+  url: https://$API.execute-api.$REGION.amazonaws.com/prod/DynamoDBManager
+  schedule: 0 15 10 * * ? *
+  enabled: false
