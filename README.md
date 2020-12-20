@@ -4,10 +4,14 @@ Demonstrates a way on how to implement a basic HTTP ping-like Crontab schedules.
 
 The sample has folder crontabs which has YAML crontab samples. Folder with crontabs is monitored for file changes.
 
-### 
+### Launch sample
 
-Start the worker:
+Start the worker and the CronTabControllerWorkflow:
 
     gradle -q execute -PmainClass=crontabpoc.CronTab
 
 Check the output of the worker window if you want to read some debugging info.
+
+### TODO
+
+See [TODO](TODO.md) for more details.
