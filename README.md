@@ -8,6 +8,8 @@ The sample has folder crontabs which has YAML crontab samples. Folder with cront
 
 Install local temporal platform. See [Quick Install](https://docs.temporal.io/docs/server-quick-install) for instructions.
 
+Install Gradle. See [Install Instructions](https://gradle.org/install/) for more details.
+
 Start the worker and the CronTabControllerWorkflow:
 
     gradle -q execute -PmainClass=crontabpoc.CronTab
