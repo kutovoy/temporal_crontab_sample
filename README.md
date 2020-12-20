@@ -14,4 +14,4 @@ Check the output of the worker window if you want to read some debugging info.
 
 ### TODO
 
-See [TODO](TODO.md) for more details.
+See [TODO.md](TODO.md) for more details.
