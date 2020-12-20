@@ -6,6 +6,8 @@ The sample has folder crontabs which has YAML crontab samples. Folder with cront
 
 ### Launch sample
 
+Install local Docker Desktop (for development, see [Project Page](https://www.docker.com/products/docker-desktop) for more informations) or ensure you have other means on how to run "docker-compose up" command to launch local dev temporal server.
+
 Install local temporal platform. See [Quick Install](https://docs.temporal.io/docs/server-quick-install) for instructions.
 
 Install Gradle. See [Install Instructions](https://gradle.org/install/) for more details.
