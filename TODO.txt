@@ -1,0 +1,8 @@
+optional:
+
+1. separate worker into a separate class
+
+long term:
+
+1. fully implement deterministic key concept: implement fully deterministic model for CronTabWorkflow by let's say passing created/updated crontab content via a signal into CronTabWorkflow so it can recover it's state
+2. fully support distributed key concept: support some code version control system and integrate via some hooks - currently this sample is not distributed - sample expects that crontab folder exists on the host with the worker executing workflows
