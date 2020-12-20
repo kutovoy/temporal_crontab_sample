@@ -6,7 +6,7 @@ The sample has folder crontabs which has YAML crontab samples. Folder with cront
 
 ### Launch sample
 
-Install local Docker Desktop (for development, see [Project Page](https://www.docker.com/products/docker-desktop) for more informations) or ensure you have other means on how to run "docker-compose up" command to launch local dev temporal server.
+Install local Docker Desktop (for development only, see [Project Page](https://www.docker.com/products/docker-desktop) for more informations) or ensure you have other means on how to run "docker-compose up" command to launch local dev temporal server.
 
 Install local temporal platform. See [Quick Install](https://docs.temporal.io/docs/server-quick-install) for instructions.
 
@@ -16,7 +16,7 @@ Start the worker and the CronTabControllerWorkflow:
 
     gradle -q execute -PmainClass=crontabpoc.CronTab
 
-Check the output of the worker window if you want to read some debugging info.
+Check the output of the worker window if you want to read some debugging info or look for the workflow details/history events in the GUI - click [here](http://localhost:8088/) once Temporal server and worker is running.
 
 ### TODO
 
