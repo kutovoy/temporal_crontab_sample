@@ -1,15 +1,15 @@
 - type: HTTP
   method: GET
-  url: http://www.kutovyy.com/temporal.php?action=ping
-  schedule: "* * * * * ?"
-  failureURL: http://www.kutovyy.com/temporal.php?action=ping-failure
-  enabled: true
-- type: HTTP
-  method: GET
   url: http://www.kutovyy.com/this-does-not-exist-for-sure
   schedule: "* * * * * ?"
   failureURL: http://www.kutovyy.com/temporal.php?action=for-sure-failure
   enabled: true
+- type: HTTP
+  method: GET
+  url: http://www.kutovyy.com/temporal.php?action=ping
+  schedule: "* * * * * ?"
+  failureURL: http://www.kutovyy.com/temporal.php?action=ping-failure
+  enabled: false
 - type: HTTP
   method: GET
   url: https://acme.com/
