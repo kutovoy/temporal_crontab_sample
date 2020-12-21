@@ -143,7 +143,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
   // Starts new CronTabWorkflow from the crontab filename
   @Override
   public void launchNewCrontabWorkflowFromFileName(String fileName) {
-    System.out.println("\n\nStarting CronTabWorkflow from file: " + fileName + "\n\n");
+    System.out.println("\nlaunchNewCrontabWorkflowFromFileName(" + fileName + ")\n");
 
     File file = new File(dir + "/" + fileName);
 
@@ -251,6 +251,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
   // Activity to stop a CronTabWorkflow
   @Override
   public void stopCrontabWorkflowFromFileName(String fileName) {
+    System.out.println("\nstopCrontabWorkflowFromFileName(" + fileName + ")\n");
     CronTabWorkflow workflow = client.newWorkflowStub(CronTabWorkflow.class, fileName);
 
     // Notify the workflow that it was stopped as an extra safety measure

@@ -4,9 +4,3 @@
   schedule: 0 0 12 1/5 * ?
   failureURL: https://acme.com/alert-signal
   enabled: false
-- type: HTTP
-  method: GET
-  url: https://acme.com/?a=2
-  schedule: 0 0 12 1/5 * ?
-  failureURL: https://acme.com/alert-signal
-  enabled: false
