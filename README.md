@@ -23,6 +23,10 @@ Or you can start workers on any number of host greater than 0 (ensure that you w
 And launch CronTabControllerWorkflow locally where temporal service is running (or specify where is it running) with:
 
     gradle -q execute -PmainClass=crontabpoc.CronTabControllerWorkflowStarter
+    
+To run some implemented tests:
+
+    gradle clean test
 
 
 Check the output of the worker window if you want to read some debugging info or look for the workflow details/history events in the GUI - click [here](http://localhost:8088/) once Temporal server and worker is running.
