@@ -2,7 +2,7 @@
 
 Demonstrates a way on how to implement a basic HTTP ping-like Crontab schedules. Can be easily extended.
 
-The sample has folder crontabs which has YAML crontab samples. Folder with crontabs is monitored for file changes.
+The sample has folder crontabs which has YAML crontab samples. Folder with crontabs is monitored for *.yml file changes which will trigger updates to the running cron tab workflows.
 
 ### Launch sample
 
