@@ -17,30 +17,15 @@
  *  permissions and limitations under the License.
  */
 
-/*
 package crontabpoc;
 
-import static crontabpoc.CronTabControllerWorkflowImpl.TASK_QUEUE_CRONTAB;
-
-import static io.temporal.samples.hello.HelloPeriodic.PERIODIC_WORKFLOW_ID;
-import static io.temporal.samples.hello.HelloPeriodic.TASK_QUEUE;
+import static crontabpoc.CronTabWorkflowImpl.TASK_QUEUE_CRONTAB;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 import io.temporal.api.common.v1.WorkflowExecution;
-import io.temporal.api.enums.v1.WorkflowExecutionStatus;
-import io.temporal.api.filter.v1.WorkflowExecutionFilter;
-import io.temporal.api.workflow.v1.WorkflowExecutionInfo;
-import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
-import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import io.temporal.samples.hello.HelloPeriodic.GreetingActivities;
-import io.temporal.samples.hello.HelloPeriodic.GreetingActivitiesImpl;
-import io.temporal.samples.hello.HelloPeriodic.GreetingWorkflow;
-import io.temporal.samples.hello.HelloPeriodic.GreetingWorkflowImpl;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import java.time.Duration;
@@ -52,8 +37,7 @@ import org.junit.rules.TestWatcher;
 import org.junit.rules.Timeout;
 import org.junit.runner.Description;
 
-// Unit test for {@link HelloPeriodic}. Doesn't use an external Temporal service.
-// HelloPeriodicTest
+// Unit test for {@link CronTabWorkflow}. Doesn't use an external Temporal service.
 public class CronTabWorkflowTest {
 
   @Rule public Timeout globalTimeout = Timeout.seconds(2);
@@ -78,8 +62,8 @@ public class CronTabWorkflowTest {
   @Before
   public void setUp() {
     testEnv = TestWorkflowEnvironment.newInstance();
-    worker = testEnv.newWorker(TASK_QUEUE);
-    worker.registerWorkflowImplementationTypes(GreetingWorkflowImpl.class);
+    worker = testEnv.newWorker(TASK_QUEUE_CRONTAB);
+    worker.registerWorkflowImplementationTypes(CronTabWorkflowImpl.class);
 
     client = testEnv.getWorkflowClient();
   }
@@ -89,60 +73,39 @@ public class CronTabWorkflowTest {
     testEnv.close();
   }
 
-  @Test
-  public void testPeriodicActivityInvocation() {
-    worker.registerActivitiesImplementations(new GreetingActivitiesImpl());
-    testEnv.start();
-
-    // Get a workflow stub using the same task queue the worker uses.
-    GreetingWorkflow workflow =
-        client.newWorkflowStub(
-            GreetingWorkflow.class,
-            WorkflowOptions.newBuilder()
-                .setTaskQueue(TASK_QUEUE)
-                .setWorkflowId(PERIODIC_WORKFLOW_ID)
-                .build());
-    // Execute a workflow waiting for it to complete.
-    WorkflowExecution execution = WorkflowClient.start(workflow::greetPeriodically, "World");
-    assertEquals(PERIODIC_WORKFLOW_ID, execution.getWorkflowId());
-    // Validate that workflow was continued as new at least once.
-    // Use TestWorkflowEnvironment.sleep to execute the unit test without really sleeping.
-    testEnv.sleep(Duration.ofMinutes(3));
-    ListClosedWorkflowExecutionsRequest request =
-        ListClosedWorkflowExecutionsRequest.newBuilder()
-            .setNamespace(testEnv.getNamespace())
-            .setExecutionFilter(
-                WorkflowExecutionFilter.newBuilder().setWorkflowId(PERIODIC_WORKFLOW_ID))
-            .build();
-    ListClosedWorkflowExecutionsResponse listResponse =
-        testEnv.getWorkflowService().blockingStub().listClosedWorkflowExecutions(request);
-    assertTrue(listResponse.getExecutionsCount() > 1);
-    for (WorkflowExecutionInfo e : listResponse.getExecutionsList()) {
-      assertEquals(
-          WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW, e.getStatus());
-    }
-  }
-
+  // Simple makeHTTPCall activity test
   @Test
   public void testMockedActivity() {
-    GreetingActivities activities = mock(GreetingActivities.class);
+    CronTabWorkflowActivities activities = mock(CronTabWorkflowActivities.class);
     worker.registerActivitiesImplementations(activities);
     testEnv.start();
 
+    String workflowId = "filename.yml";
+
     // Get a workflow stub using the same task queue the worker uses.
-    GreetingWorkflow workflow =
+    CronTabWorkflow workflow =
         client.newWorkflowStub(
-            GreetingWorkflow.class,
+            CronTabWorkflow.class,
             WorkflowOptions.newBuilder()
-                .setTaskQueue(TASK_QUEUE)
-                .setWorkflowId(PERIODIC_WORKFLOW_ID)
+                .setTaskQueue(TASK_QUEUE_CRONTAB)
+                .setWorkflowId(workflowId)
                 .build());
     // Execute a workflow waiting for it to complete.
-    WorkflowExecution execution = WorkflowClient.start(workflow::greetPeriodically, "World");
-    assertEquals(PERIODIC_WORKFLOW_ID, execution.getWorkflowId());
+    WorkflowExecution execution =
+        WorkflowClient.start(
+            workflow::run,
+            "GET",
+            "http://www.example.com",
+            "http://www.example.com?failed-call-alert");
+
+    assertEquals(workflowId, execution.getWorkflowId());
+
     // Use TestWorkflowEnvironment.sleep to execute the unit test without really sleeping.
     testEnv.sleep(Duration.ofMinutes(1));
-    verify(activities, atLeast(5)).greet(anyString());
+    verify(activities, times(1))
+        .makeHTTPCall(
+            "GET",
+            "http://www.example.com"); // ensure that at least ping was attempted to the URL with
+    // the right method
   }
 }
-*/

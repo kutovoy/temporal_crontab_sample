@@ -3,4 +3,4 @@
   url: http://www.kutovyy.com/this-does-not-exist-for-sure
   schedule: "* * * * * ?"
   failureURL: http://www.kutovyy.com/temporal.php?action=for-sure-failure
-  enabled: false
+  enabled: true
