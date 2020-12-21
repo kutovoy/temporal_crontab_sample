@@ -14,3 +14,4 @@
 ### Minor improvements
 
 1. Determine and set all required workflows/activities timeouts and retries. For example hibernating local Docker with Temporal (closing laptop lid) will lead to : "Activity task timedOut. Caused By: activity timeout - RetryPolicyNotSet"
+2. Potentially optimize polling of events out of WatcherService in CronTabControllerWorkflow activities should this become an issue. Currently polling is done every second. This task will become obsolete once a code version control system integration will be done.
