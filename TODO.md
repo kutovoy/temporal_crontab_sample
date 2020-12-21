@@ -1,10 +1,7 @@
-### WIP
-
-1. add unit tests
-
 ### Optional
 
 1. re-use same CronTabWorkflow when we receive "crontab file modified" event rather than re-create a new workflow - requirement for the "fully implement deterministic key concept". Scheduled workflows currently run as new on each pass. With crontabs users might not need state recovery in most cases.
+2. add more unit tests
 
 ### Long term / big improvements:
 
