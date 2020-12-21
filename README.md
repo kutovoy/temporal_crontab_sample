@@ -27,6 +27,10 @@ And launch CronTabControllerWorkflow locally where temporal service is running (
 
 Check the output of the worker window if you want to read some debugging info or look for the workflow details/history events in the GUI - click [here](http://localhost:8088/) once Temporal server and worker is running.
 
+### PENDING: Terminating scheduled workflow is NOT implemented
+
+Example is currently missing implementation of the cron scheduled CronTabWorkflow termination so the "file changed" and "file deleted" events are being triggered but they partly fail until termination code is missing.
+
 ### TODO
 
 See [TODO.md](TODO.md) for more details.
