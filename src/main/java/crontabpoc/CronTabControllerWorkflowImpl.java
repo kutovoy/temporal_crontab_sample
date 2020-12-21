@@ -29,14 +29,19 @@ import org.slf4j.Logger;
  * functionality comes from {@link WorkflowOptions.Builder#setCronSchedule(String)} property.
  */
 public class CronTabControllerWorkflowImpl implements CronTabControllerWorkflow {
+  // Temporal queue name for the CronTabControllerWorkflow
+  static final String TASK_QUEUE_CONTROLLER = "CronTabController";
+  static final String PATH_TO_CRONTABS = "crontabs";
 
   private static Logger logger = Workflow.getLogger(CronTabControllerWorkflowImpl.class);
 
+  // Fine tune activities timeouts and retries as needed
   private final CronTabControllerWorkflowActivities CronTabControllerWorkflowActivities =
       Workflow.newActivityStub(
           CronTabControllerWorkflowActivities.class,
           ActivityOptions.newBuilder().setScheduleToCloseTimeout(Duration.ofSeconds(300)).build());
 
+  // Path to the crontabs folder
   String mCrontabsFolder;
 
   @Override
@@ -46,19 +51,16 @@ public class CronTabControllerWorkflowImpl implements CronTabControllerWorkflow 
 
     logger.info("executing initial crontabs scan");
 
+    // Initially load and parse all .yml files in the crontabs folder
     CronTabControllerWorkflowActivities.initialScanCrontabs();
 
     while (true) {
-      // do work
-
-      // while (!"Bye".equals(greeting)) {
-      // Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
-
-      logger.info("!!!do work step!!! 1");
+      logger.info("scanning for crontabs folder changes");
 
       CronTabControllerWorkflowActivities.stepScanForChanges();
 
-      Workflow.sleep(Duration.ofSeconds(5));
+      Workflow.sleep(
+          Duration.ofSeconds(1)); // Fine tune desired timeout of pulling file changes events here
     }
   }
 }

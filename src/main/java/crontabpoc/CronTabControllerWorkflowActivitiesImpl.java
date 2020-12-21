@@ -19,8 +19,10 @@
 
 package crontabpoc;
 
+import static crontabpoc.CronTabWorkflowImpl.TASK_QUEUE_CRONTAB;
 import static java.nio.file.StandardWatchEventKinds.*;
 
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -32,40 +34,51 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
+/** Activities class which implements all activities for CronTabControllerWorkflow */
 class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkflowActivities {
-  static final String TASK_QUEUE = "CronTabJobs";
-
+  // We use these objects to launch/access other workflows
   private WorkflowServiceStubs service;
   private WorkflowClient client;
 
   // CronTab directory watchers variables
   private Path dir; // Path to crontabs directory
   private WatchService watcher;
-  private WatchKey key;
+  private WatchKey watcherKey;
 
+  // Constructor
   public CronTabControllerWorkflowActivitiesImpl(String crontabsFolderPath, WatchService watcher) {
+    // Setup workflow service and client objects, they should not be created more than once
     service = WorkflowServiceStubs.newInstance();
     client = WorkflowClient.newInstance(service);
 
+    // save Java Watch Service which is monitoring folder with crontabs for file changes
     this.watcher = watcher;
+
     dir = Paths.get(crontabsFolderPath);
+
+    // register what file change events we want to monitor
     try {
-      key = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+      watcherKey = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
     } catch (IOException x) {
+      // TODO: take some action if we failed to register for the folder watcher service
       System.err.println(x);
-      key = null;
+      watcherKey = null;
     }
   }
 
+  // Activity where we will poll WatchService for the new folder changes events and take some
+  // actions when they happens
   @Override
   public void stepScanForChanges() {
+
     try {
-      key = watcher.take();
+      watcherKey = watcher.take();
     } catch (InterruptedException x) {
       return;
     }
 
-    for (WatchEvent<?> event : key.pollEvents()) {
+    // Get all new folder file change events
+    for (WatchEvent<?> event : watcherKey.pollEvents()) {
       WatchEvent.Kind<?> kind = event.kind();
 
       // This key is registered only
@@ -77,88 +90,97 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
         continue;
       }
 
-      // The filename is the
-      // context of the event.
+      // The filename is the context of the event.
       WatchEvent<Path> ev = (WatchEvent<Path>) event;
-      Path filename = ev.context();
+      Path fileNamePath = ev.context();
+      String fileName = fileNamePath.toString();
 
+      // Skip any files which are not .yml crontabs
+      if (!fileName.contains(".yml")) {
+        continue;
+      }
+
+      // start new CronTabWorkflow when new crontab file is found
       if (kind == ENTRY_CREATE) {
-        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
+        System.out.println("\n\nENTRY_CREATE: " + fileNamePath + "\n\n");
 
-        launchNewCrontabWorkflowFromFileName(filename.toString());
+        launchNewCrontabWorkflowFromFileName(fileName);
 
         continue;
       }
 
+      // stop CronTabWorkflow when crontab file was deleted
       if (kind == ENTRY_DELETE) {
-        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
+        System.out.println("\n\nENTRY_DELETE: " + fileNamePath + "\n\n");
 
-        stopCrontabWorkflowFromFileName(filename.toString());
+        stopCrontabWorkflowFromFileName(fileName);
 
         continue;
       }
 
+      // stop CronTabWorkflow when crontab file was modified
+      // start new CronTabWorkflow which will pull new settings from the modified crontab file
       if (kind == ENTRY_MODIFY) {
-        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
+        System.out.println("\n\nENTRY_MODIFY: " + fileNamePath + "\n\n");
 
-        stopCrontabWorkflowFromFileName(filename.toString());
+        stopCrontabWorkflowFromFileName(fileName);
 
-        launchNewCrontabWorkflowFromFileName(filename.toString());
+        launchNewCrontabWorkflowFromFileName(fileName);
 
         continue;
       }
     }
 
-    // Reset the key -- this step is critical if you want to
+    // Reset the watcherKey -- this step is critical if you want to
     // receive further watch events.  If the key is no longer valid,
     // the directory is inaccessible so exit the loop.
-    boolean valid = key.reset();
+    boolean valid = watcherKey.reset();
     if (!valid) {
-      return; // FIXME: do something in case if watcher failed
+      return; // TODO: do something in case if watcher failed
     }
   }
 
+  // Starts new CronTabWorkflow from the crontab filename
   @Override
   public void launchNewCrontabWorkflowFromFileName(String fileName) {
-    System.out.println("\n\n\nLaunching new activity: " + fileName + "\n\n\n");
+    System.out.println("\n\nStarting CronTabWorkflow from file: " + fileName + "\n\n");
 
     File file = new File(dir + "/" + fileName);
 
     try {
       java.io.InputStream in = new java.io.FileInputStream(file);
 
+      // Lets parse yml file
       org.yaml.snakeyaml.Yaml yamlParser = new org.yaml.snakeyaml.Yaml();
       Iterable<Object> itr = yamlParser.loadAll(in);
 
       for (Object o : itr) {
-        System.out.println("Loaded file " + file.getName());
-        System.out.println(o);
 
         java.util.ArrayList list = (java.util.ArrayList) o;
 
         int entryIndex = -1;
         for (Object el : list) {
 
-          if (entryIndex
-              >= 0) // FIXME: task was clarified : only one crontab entry per file but in an array
-            // format. TODO: refactor
-            break;
+          /**
+           * TODO: excercise task was clarified : only one crontab entry per file is expected now
+           * but in an array format. so we only process 1st element. We need crontab workflows to
+           * match .yml file name. A better way to refactor would be to not use arrays in the
+           * crontab file definition. Then we can just parse whole file into a proper Java object
+           * which we describe as a class. Part of the exercise definition.
+           */
+          if (entryIndex >= 0)
+            break; // Do not process more than one crontab entry per crontab file.
 
           entryIndex++;
 
           java.util.HashMap<String, Object> map = (java.util.HashMap<String, Object>) el;
 
-          System.out.println(
-              "parsing cron file entry #" + entryIndex + ", entry url " + map.get("url"));
-
           Boolean enabled = true;
 
           if (map.containsKey("enabled")) enabled = (Boolean) map.get("enabled");
 
-          System.out.println("enabled: " + enabled);
-
           if (!enabled) {
-            System.out.println("skipping disabled crontab entry");
+            System.out.println("skipping disabled crontab file");
 
             continue;
           }
@@ -166,11 +188,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
           String type = (String) map.get("type");
 
           if (!type.equals("HTTP")) {
-            System.out.println(
-                "skipping unsupported type "
-                    + map.get("type")
-                    + " crontab entry "
-                    + file.getName());
+            System.out.println("skipping unsupported type " + map.get("type"));
 
             continue;
           }
@@ -179,15 +197,12 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
           String method = (String) map.get("method");
           String schedule = (String) map.get("schedule");
 
-          // Cut off unused "command" part with ? if present
+          // Cut off unused "command" part with ? if present. Part of the exercise definition.
           if (schedule.indexOf("?") != -1) schedule = schedule.substring(0, schedule.indexOf("?"));
 
           String failureURL = null;
 
           if (map.containsKey("failureURL")) failureURL = (String) map.get("failureURL");
-
-          System.out.println(
-              "ready to queue workflow!" + url + " " + method + " " + schedule + ", " + failureURL);
 
           try {
             /*
@@ -203,17 +218,12 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
             WorkflowOptions workflowOptions =
                 WorkflowOptions.newBuilder()
                     .setWorkflowId(file.getName())
-                    // case if multiple cron actions will use same URL for some
-                    // reason
-                    .setTaskQueue(TASK_QUEUE)
+                    .setTaskQueue(TASK_QUEUE_CRONTAB)
                     .setCronSchedule(schedule)
                     // Execution timeout limits total time. Cron will stop executing after this
                     // timeout.
-                    // .setWorkflowExecutionTimeout(Duration.ofMinutes(5)) // for debugging turn
-                    // on to
-                    // stop
-                    // workflow after some time
-                    // .setWorkflowRunTimeout(Duration.ofMinutes(10)) // Run timeout limits
+                    // .setWorkflowExecutionTimeout(Duration.ofMinutes(5))
+                    // .setWorkflowRunTimeout(Duration.ofMinutes(10))// Run timeout limits
                     // duration of
                     // a
                     // single workflow invocation.
@@ -222,11 +232,11 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
             CronTabWorkflow workflow =
                 client.newWorkflowStub(CronTabWorkflow.class, workflowOptions);
 
-            // FIXME: specify package for WorkflowExecution or import it
-            // WorkflowExecution execution =
-            WorkflowClient.start(workflow::run, method, url, failureURL);
+            // Async launch the CronTabWorkflow
+            WorkflowExecution execution =
+                WorkflowClient.start(workflow::run, method, url, failureURL);
 
-            // System.out.println("Started " + execution);
+            System.out.println("Started " + execution);
           } catch (io.temporal.client.WorkflowExecutionAlreadyStarted e) {
             System.out.println("Already running as " + e.getExecution());
           }
@@ -238,24 +248,32 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
     }
   }
 
+  // Activity to stop a CronTabWorkflow
   @Override
   public void stopCrontabWorkflowFromFileName(String fileName) {
     CronTabWorkflow workflow = client.newWorkflowStub(CronTabWorkflow.class, fileName);
 
+    // Notify the workflow that it was stopped as an extra safety measure
     workflow.crontabDeletedEvent();
-    // Returns the result after waiting for the Workflow to complete.
-    //      String result = workflow.getURL();
-    //    workflow.test("starting");
+
+    // FIXME: how to terminate scheduled workflow?
+    // FIXME: how to terminate scheduled workflow?
+    // FIXME: how to terminate scheduled workflow?
+    // FIXME: how to terminate scheduled workflow?
   }
 
+  // Launch initial CronTabWorkflow during statup of CronTabControllerWorkflow - parse all .yml
+  // files in crontab folder
   @Override
   public void initialScanCrontabs() {
+    System.out.println("initialScanCrontabs() executed");
 
     File folder = new File(dir.toString());
     File[] listOfFiles = folder.listFiles();
 
     for (File file : listOfFiles) {
       if (!file.isFile() || !file.getName().contains(".yml")) continue;
+
       launchNewCrontabWorkflowFromFileName(file.getName());
     }
   }

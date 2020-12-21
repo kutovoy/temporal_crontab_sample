@@ -31,40 +31,47 @@ import org.slf4j.Logger;
  * functionality comes from {@link WorkflowOptions.Builder#setCronSchedule(String)} property.
  */
 public class CronTabWorkflowImpl implements CronTabWorkflow {
+  // Temporal queue name for the CronTabWorkflow
+  static final String TASK_QUEUE_CRONTAB = "CronTabJobs";
 
   private static Logger logger = Workflow.getLogger(CronTabWorkflowImpl.class);
 
+  // Fine tune activities timeouts and retries as needed
   private final CronTabWorkflowActivities CronTabWorkflowActivities =
       Workflow.newActivityStub(
           CronTabWorkflowActivities.class,
           ActivityOptions.newBuilder().setScheduleToCloseTimeout(Duration.ofSeconds(300)).build());
 
-  String mMethod;
-  String mURL;
-  String mFailureURL;
-  Boolean mCrontabDeleted = false;
+  String mMethod; // HTTP method to ping URLs
+  String mURL; // URL to ping on a schedule
+  String mFailureURL; // URL to ping if we are unable to reach mURL
+  Boolean mCrontabDeleted =
+      false; // Will be set to true if we need to terminate our execution. Extra check
 
+  // CronTabControllerWorkflow will notify us via this method when our corresponding crontab file
+  // will be deleted. we should not make any url pings should this happen and terminate.
   @Override
   public void crontabDeletedEvent() {
     mCrontabDeleted = true;
 
-    System.out.println("\n\n\n\ncrontabDeletedEvent RECEIVED!\n\n\n\n");
+    System.out.println("\n\ncrontabDeletedEvent RECEIVED!\n\n");
   }
 
-  @Override
-  public String getURL() {
-    return mURL;
-  }
-
+  // This main workflow method is executed as new on a schedule
   @Override
   public void run(String method, String URL, String failureURL) {
 
     // check if crontab received any notification that it was deleted
     if (mCrontabDeleted) {
-      // stop workflow
-      //      java.lang.Thread.interrupt();
+      // stop workflow if we were notified that our crontab was deleted
+
+      // FIXME: how to terminate scheduled workflow?
+      // FIXME: how to terminate scheduled workflow?
+      // FIXME: how to terminate scheduled workflow?
+      // FIXME: how to terminate scheduled workflow?
+
       // throw new Exception("Crontab file was deleted. Terminating workflow");
-      Thread.currentThread().interrupt();
+      // Thread.currentThread().interrupt(); // this will simply execute workflow as new
 
       return;
     }
@@ -73,37 +80,20 @@ public class CronTabWorkflowImpl implements CronTabWorkflow {
     mURL = URL;
     mFailureURL = failureURL;
 
-    // TODO: check if our YAML file exists
-    // TODO: check if our YAML file didn't change [verify checksum]
+    // next 2 TODO can't be done if worker is not running on the same host with cron tabs folder.
+    // temporal is a distributed system.
+    // TODO: potentially do extra check if our YAML file exists
+    // TODO: potentially do extra check to see if our YAML file didn't change [save and verify file
+    // checksum of some kind]
 
-    logger.info(
-        " ### WORKFLOW " + method + ", " + URL + ", " + failureURL + ": RUN START ### \n\n\n");
     int responseCode = CronTabWorkflowActivities.makeHTTPCall(mMethod, mURL);
 
-    logger.info("executed makeHTTPCall activity");
-    logger.info(
-        " ### WORKFLOW " + method + ", " + URL + ", " + failureURL + ": RUN END ### \n\n\n");
+    logger.info("executed makeHTTPCall activity on URL");
 
     if (responseCode != 200) {
-      logger.info(
-          " ### WORKFLOW "
-              + method
-              + ", "
-              + URL
-              + ", "
-              + failureURL
-              + ": FAILURE RUN START ### \n\n\n");
       CronTabWorkflowActivities.makeHTTPCall(mMethod, mFailureURL);
 
-      logger.info("executed an activity");
-      logger.info(
-          " ### WORKFLOW "
-              + method
-              + ", "
-              + URL
-              + ", "
-              + failureURL
-              + ": FAILURE RUN END ### \n\n\n");
+      logger.info("executed makeHTTPCall activity on failureURL");
     }
   }
 }

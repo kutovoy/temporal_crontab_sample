@@ -21,13 +21,21 @@ package crontabpoc;
 
 import io.temporal.activity.ActivityInterface;
 
+/**
+ * Activities collection Interface class which describes all activities for
+ * CronTabControllerWorkflow
+ */
 @ActivityInterface
 public interface CronTabControllerWorkflowActivities {
+  // Scan crontabs folder and launch all crontabs
   void initialScanCrontabs();
 
+  // Poll WatcherService to process all new file changes in the crontab folder
   void stepScanForChanges();
 
+  // Create and start new CronTabWorkflow from .yml file name
   void launchNewCrontabWorkflowFromFileName(String fileName);
 
+  // Terminate CronTabWorkflow from .yml file name
   void stopCrontabWorkflowFromFileName(String fileName);
 }

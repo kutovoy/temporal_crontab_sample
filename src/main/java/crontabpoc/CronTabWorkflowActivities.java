@@ -21,7 +21,9 @@ package crontabpoc;
 
 import io.temporal.activity.ActivityInterface;
 
+/** Activities collection Interface class which describes all activities for CronTabWorkflow */
 @ActivityInterface
 public interface CronTabWorkflowActivities {
+  // Activity to make a HTTP call
   int makeHTTPCall(String method, String URL);
 }

@@ -22,8 +22,13 @@ package crontabpoc;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
+/**
+ * This is orchestrator CronTabControllerWorkflow which is responsible for launching/stopping
+ * CronTabWorkflows and monitoring crontab folders for file changes.
+ */
 @WorkflowInterface
 public interface CronTabControllerWorkflow {
+  // Main workflow business logic
   @WorkflowMethod
   void run(String crontabsFolder);
 }

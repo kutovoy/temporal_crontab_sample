@@ -19,19 +19,22 @@
 
 package crontabpoc;
 
-import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
+/**
+ * This is main CronTabWorkflow "work horse" workflow which is responsible for execution of a single
+ * crontab job.
+ */
 @WorkflowInterface
 public interface CronTabWorkflow {
+  // Main workflow business logic
   @WorkflowMethod
   void run(String method, String url, String failureURL);
 
-  @QueryMethod
-  String getURL();
-
+  // Signal for extra safety. Main CronTabControllerWorkflow will call us to notify that this
+  // workflow crontab file was deleted and we should not proceed with execution.
   @SignalMethod
   void crontabDeletedEvent();
 }

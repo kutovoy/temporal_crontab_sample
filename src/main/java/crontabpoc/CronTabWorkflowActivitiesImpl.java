@@ -24,14 +24,25 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+/** Activities class which implements all activities for CronTabWorkflow */
 class CronTabWorkflowActivitiesImpl implements CronTabWorkflowActivities {
 
+  // Activity to ping a URL
   @Override
   public int makeHTTPCall(String method, String URL) {
-    System.out.println(" ### ACTIVITY " + method + ", " + URL + " EXECUTE START ### \n\n\n");
-    System.out.println("From " + Activity.getExecutionContext().getInfo().getWorkflowId());
+    System.out.println(
+        "\n\n ### CronTabWorkflowActivitiesImpl["
+            + Activity.getExecutionContext().getInfo().getWorkflowId()
+            + "].makeHTTPCall("
+            + method
+            + ", "
+            + URL
+            + ") EXECUTION STARTED ### \n\n");
 
-    int status = 500;
+    int status =
+        500; // in case if any exception/timeout occurs we will return 500 Response Code to trigger
+    // FailureURL
+
     try {
 
       URL url = new URL(URL);
@@ -39,16 +50,29 @@ class CronTabWorkflowActivitiesImpl implements CronTabWorkflowActivities {
       HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
       con.setRequestMethod(method);
-      con.setConnectTimeout(5000);
-      con.setReadTimeout(5000);
+      con.setConnectTimeout(
+          5000); // Fine tune these keeping in mind what timeouts/retries are set on the activities
+      // and on the CronTabWorkflow itself
+      con.setReadTimeout(
+          5000); // Fine tune these keeping in mind what timeouts/retries are set on the activities
+      // and on the CronTabWorkflow itself
 
       status = con.getResponseCode();
     } catch (IOException e) {
-      System.out.println(" exception! ");
+      System.out.println("Exception: " + e);
     }
 
-    System.out.println(" ### ACTIVITY " + method + ", " + URL + " EXECUTE END ### \n\n\n");
+    System.out.println(
+        "\n\n ### CronTabWorkflowActivitiesImpl["
+            + Activity.getExecutionContext().getInfo().getWorkflowId()
+            + "].makeHTTPCall("
+            + method
+            + ", "
+            + URL
+            + ") EXECUTED, RESPONCE CODE = "
+            + status
+            + " ### \n\n");
 
-    return status;
+    return status; // if we return non 200 Response Code then FailureURL will be triggered
   }
 }
