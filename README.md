@@ -31,6 +31,8 @@ To run some implemented tests:
 
 Check the output of the worker window if you want to read some debugging info or look for the workflow details/history events in the GUI - click [here](http://localhost:8088/) once Temporal server and worker is running.
 
+Adding .yml files to the crontabs folder should create new CronTabWorkflows. Deleting files will send crontabDeletedEvent and terminate (PENDING implementation, see below) scheduled workflow. Modifying files will terminate (PENDING implementation, see below) scheduled workflow and start a new one with updated crontab content from the modified file.
+
 ### PENDING: Terminating scheduled workflow is NOT implemented.
 
 Example is currently missing implementation of the cron scheduled CronTabWorkflow termination so the "file changed" and "file deleted" events are being triggered but they partly fail until termination code is added. Question sent to the temporal community as I was not able to find a documented way on how to terminate a scheduled (cron) workflow.
