@@ -5,7 +5,7 @@
 
 ### Long term / big improvements:
 
-1. fully implement deterministic key concept: implement fully deterministic model for CronTabWorkflow by let's say passing created/updated crontab content via a signal into CronTabWorkflow so  it can recover it's state in case of retries. Scheduled workflows currently run as new on each pass.
+1. fully implement deterministic key concept: implement fully deterministic model for CronTabWorkflow by let's say passing created/updated crontab content via a signal into CronTabWorkflow so  it can recover it's state in case of retries. Scheduled workflows currently run as new on each pass. This task will become a part of implementing some code version control system.
 2. fully support distributed key concept: support some code version control system and integrate via some hooks - currently this sample is not fully distributed - sample expects that crontab folder exists on the same host with the worker executing CronTabControllerWorkflow.
 
 ### Minor improvements
