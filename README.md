@@ -29,7 +29,7 @@ Check the output of the worker window if you want to read some debugging info or
 
 ### PENDING: Terminating scheduled workflow is NOT implemented
 
-Example is currently missing implementation of the cron scheduled CronTabWorkflow termination so the "file changed" and "file deleted" events are being triggered but they partly fail until termination code is missing.
+Example is currently missing implementation of the cron scheduled CronTabWorkflow termination so the "file changed" and "file deleted" events are being triggered but they partly fail until termination code is added. Question sent to the temporal community.
 
 ### TODO
 
