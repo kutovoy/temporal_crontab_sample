@@ -43,12 +43,12 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
   private WatchService watcher;
   private WatchKey key;
 
-  public CronTabControllerWorkflowActivitiesImpl(WatchService watcher) {
+  public CronTabControllerWorkflowActivitiesImpl(String crontabsFolderPath, WatchService watcher) {
     service = WorkflowServiceStubs.newInstance();
     client = WorkflowClient.newInstance(service);
 
     this.watcher = watcher;
-    dir = Paths.get("crontabs"); // fixme: hardcoded path
+    dir = Paths.get(crontabsFolderPath);
     try {
       key = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
     } catch (IOException x) {
@@ -59,11 +59,6 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
 
   @Override
   public void stepScanForChanges() {
-    CronTabWorkflow workflow = client.newWorkflowStub(CronTabWorkflow.class, "PingWorkflow.yml");
-
-    // Returns the result after waiting for the Workflow to complete.
-    //      String result = workflow.getURL();
-    //    workflow.test("starting");
     try {
       key = watcher.take();
     } catch (InterruptedException x) {
@@ -87,28 +82,31 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
       WatchEvent<Path> ev = (WatchEvent<Path>) event;
       Path filename = ev.context();
 
-      // Verify that the new
-      //  file is a text file.
-      //      try {
-      // Resolve the filename against the directory.
-      // If the filename is "test" and the directory is "foo",
-      // the resolved name is "test/foo".
-      //        Path child = dir.resolve(filename);
-      //        if (!Files.probeContentType(child).equals("text/plain")) {
-      //          System.err.format("New file '%s'" + " is not a plain text file.%n", filename);
-      //          continue;
-      //        }
-      //      } catch (IOException x) {
-      //        System.err.println(x);
-      //        continue;
-      //      }
+      if (kind == ENTRY_CREATE) {
+        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
 
-      // Email the file to the
-      //  specified email alias.
-      //      System.out.format("Emailing file %s%n", filename);
-      workflow.test("file " + filename + " changed!");
+        launchNewCrontabWorkflowFromFileName(filename.toString());
 
-      // Details left to reader....
+        continue;
+      }
+
+      if (kind == ENTRY_DELETE) {
+        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
+
+        stopCrontabWorkflowFromFileName(filename.toString());
+
+        continue;
+      }
+      
+      if (kind == ENTRY_MODIFY) {
+        System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
+
+        stopCrontabWorkflowFromFileName(filename.toString());
+
+        launchNewCrontabWorkflowFromFileName(filename.toString());
+
+        continue;
+      }
     }
 
     // Reset the key -- this step is critical if you want to
@@ -121,139 +119,144 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
   }
 
   @Override
-  public void initialScanCrontabs(String cronTabsFolder) {
+  public void launchNewCrontabWorkflowFromFileName(String fileName) {
+    System.out.println("\n\n\nLaunching new activity: " + fileName + "\n\n\n");
 
-    // gRPC stubs wrapper that talks to the local docker instance of temporal service.
-    WorkflowServiceStubs service = WorkflowServiceStubs.newInstance();
-    // client that can be used to start and signal workflows
-    WorkflowClient client = WorkflowClient.newInstance(service);
+    File file = new File(dir + "/" + fileName);
 
-    File folder = new File(cronTabsFolder);
+    try {
+      java.io.InputStream in = new java.io.FileInputStream(file);
+
+      org.yaml.snakeyaml.Yaml yamlParser = new org.yaml.snakeyaml.Yaml();
+      Iterable<Object> itr = yamlParser.loadAll(in);
+
+      for (Object o : itr) {
+        System.out.println("Loaded file " + file.getName());
+        System.out.println(o);
+
+        java.util.ArrayList list = (java.util.ArrayList) o;
+
+        int entryIndex = -1;
+        for (Object el : list) {
+
+          if (entryIndex
+              >= 0) // FIXME: task was clarified : only one crontab entry per file but in an array
+            // format. TODO: refactor
+            break;
+
+          entryIndex++;
+
+          java.util.HashMap<String, Object> map = (java.util.HashMap<String, Object>) el;
+
+          System.out.println(
+              "parsing cron file entry #" + entryIndex + ", entry url " + map.get("url"));
+
+          Boolean enabled = true;
+
+          if (map.containsKey("enabled")) enabled = (Boolean) map.get("enabled");
+
+          System.out.println("enabled: " + enabled);
+
+          if (!enabled) {
+            System.out.println("skipping disabled crontab entry");
+
+            continue;
+          }
+
+          String type = (String) map.get("type");
+
+          if (!type.equals("HTTP")) {
+            System.out.println(
+                "skipping unsupported type "
+                    + map.get("type")
+                    + " crontab entry "
+                    + file.getName());
+
+            continue;
+          }
+
+          String url = (String) map.get("url");
+          String method = (String) map.get("method");
+          String schedule = (String) map.get("schedule");
+
+          // Cut off unused "command" part with ? if present
+          if (schedule.indexOf("?") != -1) schedule = schedule.substring(0, schedule.indexOf("?"));
+
+          String failureURL = null;
+
+          if (map.containsKey("failureURL")) failureURL = (String) map.get("failureURL");
+
+          System.out.println(
+              "ready to queue workflow!" + url + " " + method + " " + schedule + ", " + failureURL);
+
+          try {
+            /*
+             */
+            // Sets the cron schedule using the WorkflowOptions.
+            // The cron format is parsed by "https://github.com/robfig/cron" library.
+            // Besides the standard "* * * * *" format it supports @every and other extensions.
+            // Note that unit testing framework doesn't support the extensions.
+            // Use single fixed ID to ensure that there is at most one instance running. To run
+            // multiple
+            // instances set different IDs.
+
+            WorkflowOptions workflowOptions =
+                WorkflowOptions.newBuilder()
+                    .setWorkflowId(file.getName())
+                    // case if multiple cron actions will use same URL for some
+                    // reason
+                    .setTaskQueue(TASK_QUEUE)
+                    .setCronSchedule(schedule)
+                    // Execution timeout limits total time. Cron will stop executing after this
+                    // timeout.
+                    // .setWorkflowExecutionTimeout(Duration.ofMinutes(5)) // for debugging turn
+                    // on to
+                    // stop
+                    // workflow after some time
+                    // .setWorkflowRunTimeout(Duration.ofMinutes(10)) // Run timeout limits
+                    // duration of
+                    // a
+                    // single workflow invocation.
+                    .build();
+
+            CronTabWorkflow workflow =
+                client.newWorkflowStub(CronTabWorkflow.class, workflowOptions);
+
+            // FIXME: specify package for WorkflowExecution or import it
+            // WorkflowExecution execution =
+            WorkflowClient.start(workflow::run, method, url, failureURL);
+
+            // System.out.println("Started " + execution);
+          } catch (io.temporal.client.WorkflowExecutionAlreadyStarted e) {
+            System.out.println("Already running as " + e.getExecution());
+          }
+        }
+      }
+
+    } catch (IOException e) {
+      System.out.println("Failed to read file " + file.getName() + ", exception: " + e);
+    }
+  }
+
+  @Override
+  public void stopCrontabWorkflowFromFileName(String fileName) {
+    CronTabWorkflow workflow = client.newWorkflowStub(CronTabWorkflow.class, fileName);
+
+    workflow.crontabDeletedEvent();
+    // Returns the result after waiting for the Workflow to complete.
+    //      String result = workflow.getURL();
+    //    workflow.test("starting");
+  }
+
+  @Override
+  public void initialScanCrontabs() {
+
+    File folder = new File(dir.toString());
     File[] listOfFiles = folder.listFiles();
 
     for (File file : listOfFiles) {
       if (!file.isFile() || !file.getName().contains(".yml")) continue;
-
-      try {
-        java.io.InputStream in = new java.io.FileInputStream(file);
-
-        org.yaml.snakeyaml.Yaml yamlParser = new org.yaml.snakeyaml.Yaml();
-        Iterable<Object> itr = yamlParser.loadAll(in);
-
-        for (Object o : itr) {
-          System.out.println("Loaded file " + file.getName());
-          System.out.println(o);
-
-          java.util.ArrayList list = (java.util.ArrayList) o;
-
-          int entryIndex = -1;
-          for (Object el : list) {
-
-            if (entryIndex
-                >= 0) // FIXME: task was clarified : only one crontab entry per file but in an array
-              // format. TODO: refactor
-              break;
-
-            entryIndex++;
-
-            java.util.HashMap<String, Object> map = (java.util.HashMap<String, Object>) el;
-
-            System.out.println(
-                "parsing cron file entry #" + entryIndex + ", entry url " + map.get("url"));
-
-            Boolean enabled = true;
-
-            if (map.containsKey("enabled")) enabled = (Boolean) map.get("enabled");
-
-            System.out.println("enabled: " + enabled);
-
-            if (!enabled) {
-              System.out.println("skipping disabled crontab entry");
-
-              continue;
-            }
-
-            String type = (String) map.get("type");
-
-            if (!type.equals("HTTP")) {
-              System.out.println(
-                  "skipping unsupported type "
-                      + map.get("type")
-                      + " crontab entry "
-                      + file.getName());
-
-              continue;
-            }
-
-            String url = (String) map.get("url");
-            String method = (String) map.get("method");
-            String schedule = (String) map.get("schedule");
-
-            // Cut off unused "command" part with ? if present
-            if (schedule.indexOf("?") != -1)
-              schedule = schedule.substring(0, schedule.indexOf("?"));
-
-            String failureURL = null;
-
-            if (map.containsKey("failureURL")) failureURL = (String) map.get("failureURL");
-
-            System.out.println(
-                "ready to queue workflow!"
-                    + url
-                    + " "
-                    + method
-                    + " "
-                    + schedule
-                    + ", "
-                    + failureURL);
-
-            try {
-              /*
-               */
-              // Sets the cron schedule using the WorkflowOptions.
-              // The cron format is parsed by "https://github.com/robfig/cron" library.
-              // Besides the standard "* * * * *" format it supports @every and other extensions.
-              // Note that unit testing framework doesn't support the extensions.
-              // Use single fixed ID to ensure that there is at most one instance running. To run
-              // multiple
-              // instances set different IDs.
-
-              WorkflowOptions workflowOptions =
-                  WorkflowOptions.newBuilder()
-                      .setWorkflowId(file.getName())
-                      // case if multiple cron actions will use same URL for some
-                      // reason
-                      .setTaskQueue(TASK_QUEUE)
-                      .setCronSchedule(schedule)
-                      // Execution timeout limits total time. Cron will stop executing after this
-                      // timeout.
-                      // .setWorkflowExecutionTimeout(Duration.ofMinutes(5)) // for debugging turn
-                      // on to
-                      // stop
-                      // workflow after some time
-                      // .setWorkflowRunTimeout(Duration.ofMinutes(10)) // Run timeout limits
-                      // duration of
-                      // a
-                      // single workflow invocation.
-                      .build();
-
-              CronTabWorkflow workflow =
-                  client.newWorkflowStub(CronTabWorkflow.class, workflowOptions);
-
-              // FIXME: specify package for WorkflowExecution or import it
-              // WorkflowExecution execution =
-              WorkflowClient.start(workflow::run, method, url, failureURL);
-
-              // System.out.println("Started " + execution);
-            } catch (io.temporal.client.WorkflowExecutionAlreadyStarted e) {
-              System.out.println("Already running as " + e.getExecution());
-            }
-          }
-        }
-
-      } catch (IOException e) {
-        System.out.println("Failed to read file " + file.getName() + ", exception: " + e);
-      }
+      launchNewCrontabWorkflowFromFileName(file.getName());
     }
   }
 }

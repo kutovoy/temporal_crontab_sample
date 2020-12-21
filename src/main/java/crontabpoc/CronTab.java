@@ -39,6 +39,7 @@ public class CronTab {
   static final String TASK_QUEUE_CRONTABS = "CronTabJobs";
 
   public static void main(String[] args) {
+    String pathToCrontabs = "crontabs";
     // gRPC stubs wrapper that talks to the local docker instance of temporal service.
     WorkflowServiceStubs service = WorkflowServiceStubs.newInstance();
     // client that can be used to start and signal workflows
@@ -55,7 +56,8 @@ public class CronTab {
 
     try {
       workerC.registerActivitiesImplementations(
-          new CronTabControllerWorkflowActivitiesImpl(FileSystems.getDefault().newWatchService()));
+          new CronTabControllerWorkflowActivitiesImpl(
+              pathToCrontabs, FileSystems.getDefault().newWatchService()));
     } catch (Exception e) { // FIXME
     }
     // Start listening to the workflow and activity task queues.
@@ -105,7 +107,7 @@ public class CronTab {
 
       // FIXME: specify package for WorkflowExecution or import it
       // WorkflowExecution execution =
-      WorkflowClient.start(workflow::run, "crontabs");
+      WorkflowClient.start(workflow::run, pathToCrontabs);
 
       // System.out.println("Started " + execution);
     } catch (io.temporal.client.WorkflowExecutionAlreadyStarted e) {

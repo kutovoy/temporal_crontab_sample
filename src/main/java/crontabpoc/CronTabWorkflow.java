@@ -33,5 +33,5 @@ public interface CronTabWorkflow {
   String getURL();
 
   @SignalMethod
-  void test(String data);
+  void crontabDeletedEvent();
 }

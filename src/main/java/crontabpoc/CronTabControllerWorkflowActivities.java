@@ -23,7 +23,11 @@ import io.temporal.activity.ActivityInterface;
 
 @ActivityInterface
 public interface CronTabControllerWorkflowActivities {
-  void initialScanCrontabs(String folder);
+  void initialScanCrontabs();
 
   void stepScanForChanges();
+
+  void launchNewCrontabWorkflowFromFileName(String fileName);
+
+  void stopCrontabWorkflowFromFileName(String fileName);
 }

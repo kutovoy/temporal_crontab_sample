@@ -46,7 +46,7 @@ public class CronTabControllerWorkflowImpl implements CronTabControllerWorkflow 
 
     logger.info("executing initial crontabs scan");
 
-    CronTabControllerWorkflowActivities.initialScanCrontabs(mCrontabsFolder);
+    CronTabControllerWorkflowActivities.initialScanCrontabs();
 
     while (true) {
       // do work

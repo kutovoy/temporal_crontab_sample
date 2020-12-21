@@ -42,10 +42,13 @@ public class CronTabWorkflowImpl implements CronTabWorkflow {
   String mMethod;
   String mURL;
   String mFailureURL;
+  Boolean mCrontabDeleted = false;
 
   @Override
-  public void test(String data) {
-    System.out.println("\n\n\n\nYES - test method received " + data + "!\n\n\n\n");
+  public void crontabDeletedEvent() {
+    mCrontabDeleted = true;
+
+    System.out.println("\n\n\n\ncrontabDeletedEvent RECEIVED!\n\n\n\n");
   }
 
   @Override
@@ -55,6 +58,17 @@ public class CronTabWorkflowImpl implements CronTabWorkflow {
 
   @Override
   public void run(String method, String URL, String failureURL) {
+
+    // check if crontab received any notification that it was deleted
+    if (mCrontabDeleted) {
+      // stop workflow
+      //      java.lang.Thread.interrupt();
+      // throw new Exception("Crontab file was deleted. Terminating workflow");
+      Thread.currentThread().interrupt();
+
+      return;
+    }
+
     mMethod = method;
     mURL = URL;
     mFailureURL = failureURL;
