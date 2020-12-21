@@ -97,7 +97,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
 
         continue;
       }
-      
+
       if (kind == ENTRY_MODIFY) {
         System.out.println("\n\n\nENTRY_CREATE: " + filename + "\n\n\n");
 
