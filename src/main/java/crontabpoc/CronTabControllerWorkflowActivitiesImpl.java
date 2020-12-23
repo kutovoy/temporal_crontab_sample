@@ -49,6 +49,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
   public CronTabControllerWorkflowActivitiesImpl(String crontabsFolderPath, WatchService watcher) {
     // Setup workflow service and client objects, they should not be created more than once
     service = WorkflowServiceStubs.newInstance();
+// service.term grpc
     client = WorkflowClient.newInstance(service);
 
     // save Java Watch Service which is monitoring folder with crontabs for file changes
@@ -231,6 +232,7 @@ class CronTabControllerWorkflowActivitiesImpl implements CronTabControllerWorkfl
 
             CronTabWorkflow workflow =
                 client.newWorkflowStub(CronTabWorkflow.class, workflowOptions);
+// newuntyped has term method
 
             // Async launch the CronTabWorkflow
             WorkflowExecution execution =
